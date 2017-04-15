@@ -1,4 +1,4 @@
-<div class="apidocDiv">
+<html><head></head><body><div class="apidocDiv">
 <style>
 /*csslint
 */
@@ -47,17 +47,10 @@
 }
 </style>
 <h1>api documentation for
-    <a
-
-        href="https://github.com/jstuckey/gulp-gzip/"
-
-    >gulp-gzip (v1.4.0)</a>
+    <a href="https://github.com/jstuckey/gulp-gzip/">gulp-gzip (v1.4.0)</a>
 </h1>
 <h4>Gzip plugin for gulp.</h4>
-<div class="apidocSectionDiv"><a
-    href="#apidoc.tableOfContents"
-    id="apidoc.tableOfContents"
-><h1>table of contents</h1></a><ol>
+<div class="apidocSectionDiv"><a href="#apidoc.tableOfContents" id="apidoc.tableOfContents"><h1>table of contents</h1></a><ol>
 
     <li class="apidocModuleLi"><a href="#apidoc.module.gulp-gzip">module gulp-gzip</a><ol>
 
@@ -128,7 +121,7 @@
     var finished = function(err, contents, wasCompressed) {
       if (err) {
         var error = new PluginError(PLUGIN_NAME, err, { showStack: true });
-        self.emit(&#x27;error&#x27;, error);
+        self.emit('error', error);
         done();
         return;
       }
@@ -141,11 +134,11 @@
 
       var getFixedPath = function(filepath) {
         if (config.extension) {
-          filepath += &#x27;.&#x27; + config.extension;
+          filepath += '.' + config.extension;
         } else if (config.preExtension) {
-          filepath = filepath.replace(/(\.[^\.]+)$/, &#x27;.&#x27; + config.preExtension + &#x27;$1&#x27;);
+          filepath = filepath.replace(/(\.[^\.]+)$/, '.' + config.preExtension + '$1');
         } else if (config.append) {
-          filepath += &#x27;.gz&#x27;;
+          filepath += '.gz';
         }
 
         return filepath;
@@ -153,21 +146,21 @@
 
       if (wasCompressed) {
         if (file.contentEncoding) {
-          file.contentEncoding.push(&#x27;gzip&#x27;);
+          file.contentEncoding.push('gzip');
         } else {
-          file.contentEncoding = [ &#x27;gzip&#x27; ];
+          file.contentEncoding = [ 'gzip' ];
         }
 
         file.path = getFixedPath(file.path);
         complete();
       } else if (config.deleteMode) {
         var cwd = path.resolve(config.deleteModeCwd || process.cwd());
-        var directory = typeof config.deleteMode === &#x27;string&#x27; ? config.deleteMode : config.deleteMode(file);
+        var directory = typeof config.deleteMode === 'string' ? config.deleteMode : config.deleteMode(file);
         var filepath = path.resolve(cwd, directory, getFixedPath(file.relative));
 
         fs.exists(filepath, function(exists) {
           if(exists) {
-            gutil.log(gutil.colors.green(&#x27;Gzipped file &#x27; + filepath + &#x27; deleted&#x27;));
+            gutil.log(gutil.colors.green('Gzipped file ' + filepath + ' deleted'));
             fs.unlink(filepath, complete);
           } else {
             complete();
@@ -212,3 +205,4 @@
     ]
 </div>
 </div>
+</body></html>

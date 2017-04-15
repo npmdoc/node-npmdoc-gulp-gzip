@@ -63,28 +63,18 @@
 
         <li>
 
-            <span class="apidocSignatureSpan">object <span class="apidocSignatureSpan">gulp-gzip.</span>utils</span>
-
-        </li>
-
-    </ol></li>
-
-    <li class="apidocModuleLi"><a href="#apidoc.module.gulp-gzip.utils">module gulp-gzip.utils</a><ol>
-
-        <li>
-
-            <a class="apidocElementLiA" href="#apidoc.element.gulp-gzip.utils.merge">
-            function <span class="apidocSignatureSpan">gulp-gzip.utils.</span>merge
-            <span class="apidocSignatureSpan">(target, source)</span>
+            <a class="apidocElementLiA" href="#apidoc.element.gulp-gzip.gulp-gzip">
+            function <span class="apidocSignatureSpan"></span>gulp-gzip
+            <span class="apidocSignatureSpan">(options)</span>
             </a>
 
         </li>
 
         <li>
 
-            <a class="apidocElementLiA" href="#apidoc.element.gulp-gzip.utils.threshold">
-            function <span class="apidocSignatureSpan">gulp-gzip.utils.</span>threshold
-            <span class="apidocSignatureSpan">(obj)</span>
+            <a class="apidocElementLiA" href="#apidoc.element.gulp-gzip.toString">
+            function <span class="apidocSignatureSpan">gulp-gzip.</span>toString
+            <span class="apidocSignatureSpan">()</span>
             </a>
 
         </li>
@@ -97,78 +87,118 @@
 <h1><a href="#apidoc.module.gulp-gzip" id="apidoc.module.gulp-gzip">module gulp-gzip</a></h1>
 
 
-
-</div>
-
-<div class="apidocSectionDiv">
-<h1><a href="#apidoc.module.gulp-gzip.utils" id="apidoc.module.gulp-gzip.utils">module gulp-gzip.utils</a></h1>
-
-
     <h2>
-        <a href="#apidoc.element.gulp-gzip.utils.merge" id="apidoc.element.gulp-gzip.utils.merge">
-        function <span class="apidocSignatureSpan">gulp-gzip.utils.</span>merge
-        <span class="apidocSignatureSpan">(target, source)</span>
+        <a href="#apidoc.element.gulp-gzip.gulp-gzip" id="apidoc.element.gulp-gzip.gulp-gzip">
+        function <span class="apidocSignatureSpan"></span>gulp-gzip
+        <span class="apidocSignatureSpan">(options)</span>
         </a>
     </h2>
     <ul>
-    <li>description and source-code<pre class="apidocCodePre">function merge(target, source) {
-  if (typeof source === &#x27;undefined&#x27;) source = {};
+    <li>description and source-code<pre class="apidocCodePre">gulp-gzip = function (options) {
 
-  Object.keys(source).forEach(function(key) {
-    if (key === &#x27;threshold&#x27;) {
-      target[key] = threshold(source[key]);
-    } else {
-      target[key] = source[key];
+  // Combine user defined options with default options
+  var defaultConfig = {
+    append: true,
+    threshold: false,
+    gzipOptions: {},
+    skipGrowingFiles: false
+  };
+  var config = utils.merge(defaultConfig, options);
+
+  // Create a through2 object stream. This is our plugin export
+  var stream = through2.obj(gulpGzip);
+
+  // Expose the config so we can test it
+  stream.config = config;
+
+  function gulpGzip(file, enc, done) {
+
+<span class="apidocCodeCommentSpan">    /*jshint validthis: true */
+</span>    var self = this;
+
+    // Check for empty file
+    if (file.isNull()) {
+      // Pass along the empty file to the next plugin
+      self.push(file);
+      done();
+      return;
     }
-  });
 
-  return target;
+    // Call when finished with compression
+    var finished = function(err, contents, wasCompressed) {
+      if (err) {
+        var error = new PluginError(PLUGIN_NAME, err, { showStack: true });
+        self.emit(&#x27;error&#x27;, error);
+        done();
+        return;
+      }
+
+      var complete = function() {
+        file.contents = contents;
+        self.push(file);
+        done();
+      };
+
+      var getFixedPath = function(filepath) {
+        if (config.extension) {
+          filepath += &#x27;.&#x27; + config.extension;
+        } else if (config.preExtension) {
+          filepath = filepath.replace(/(\.[^\.]+)$/, &#x27;.&#x27; + config.preExtension + &#x27;$1&#x27;);
+        } else if (config.append) {
+          filepath += &#x27;.gz&#x27;;
+        }
+
+        return filepath;
+      };
+
+      if (wasCompressed) {
+        if (file.contentEncoding) {
+          file.contentEncoding.push(&#x27;gzip&#x27;);
+        } else {
+          file.contentEncoding = [ &#x27;gzip&#x27; ];
+        }
+
+        file.path = getFixedPath(file.path);
+        complete();
+      } else if (config.deleteMode) {
+        var cwd = path.resolve(config.deleteModeCwd || process.cwd());
+        var directory = typeof config.deleteMode === &#x27;string&#x27; ? config.deleteMode : config.deleteMode(file);
+        var filepath = path.resolve(cwd, directory, getFixedPath(file.relative));
+
+        fs.exists(filepath, function(exists) {
+          if(exists) {
+            gutil.log(gutil.colors.green(&#x27;Gzipped file &#x27; + filepath + &#x27; deleted&#x27;));
+            fs.unlink(filepath, complete);
+          } else {
+            complete();
+          }
+        });
+      } else {
+        complete();
+      }
+
+      return;
+    };
+
+    compress(file.contents, config, finished);
+  }
+
+  return stream;
 }</pre></li>
-    <li>example usage<pre class="apidocCodePre">...
-// Combine user defined options with default options
-var defaultConfig = {
-  append: true,
-  threshold: false,
-  gzipOptions: {},
-  skipGrowingFiles: false
-};
-var config = utils.<span class="apidocCodeKeywordSpan">merge</span>(defaultConfig, options);
-
-// Create a through2 object stream. This is our plugin export
-var stream = through2.obj(gulpGzip);
-
-// Expose the config so we can test it
-stream.config = config;
-...</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
     </ul>
 
 
 
     <h2>
-        <a href="#apidoc.element.gulp-gzip.utils.threshold" id="apidoc.element.gulp-gzip.utils.threshold">
-        function <span class="apidocSignatureSpan">gulp-gzip.utils.</span>threshold
-        <span class="apidocSignatureSpan">(obj)</span>
+        <a href="#apidoc.element.gulp-gzip.toString" id="apidoc.element.gulp-gzip.toString">
+        function <span class="apidocSignatureSpan">gulp-gzip.</span>toString
+        <span class="apidocSignatureSpan">()</span>
         </a>
     </h2>
     <ul>
-    <li>description and source-code<pre class="apidocCodePre">function threshold(obj) {
-  var ret;
-
-  switch (typeof obj) {
-    case &#x27;string&#x27;:
-      ret = bytes(obj) &#x3c; 150 ? 150 : bytes(obj);
-      break;
-    case &#x27;number&#x27;:
-      ret = obj &#x3c; 150 ? 150 : obj;
-      break;
-    case &#x27;boolean&#x27;:
-      ret = obj === false ? false : 150;
-      break;
-    default:
-      throw new Error(&#x27;threshold must be String|Number|Boolean&#x27;);
-  }
-
-  return ret;
+    <li>description and source-code<pre class="apidocCodePre">toString = function () {
+    return toString;
 }</pre></li>
     <li>example usage<pre class="apidocCodePre">n/a</pre></li>
     </ul>
