@@ -1,11 +1,13 @@
 # api documentation for  [gulp-gzip (v1.4.0)](https://github.com/jstuckey/gulp-gzip/)  [![npm package](https://img.shields.io/npm/v/npmdoc-gulp-gzip.svg?style=flat-square)](https://www.npmjs.org/package/npmdoc-gulp-gzip) [![travis-ci.org build-status](https://api.travis-ci.org/npmdoc/node-npmdoc-gulp-gzip.svg)](https://travis-ci.org/npmdoc/node-npmdoc-gulp-gzip)
 #### Gzip plugin for gulp.
 
-[![NPM](https://nodei.co/npm/gulp-gzip.png?downloads=true)](https://www.npmjs.com/package/gulp-gzip)
+[![NPM](https://nodei.co/npm/gulp-gzip.png?downloads=true&downloadRank=true&stars=true)](https://www.npmjs.com/package/gulp-gzip)
 
-[![apidoc](https://npmdoc.github.io/node-npmdoc-gulp-gzip/build/screen-capture.buildNpmdoc.browser._2Fhome_2Ftravis_2Fbuild_2Fnpmdoc_2Fnode-npmdoc-gulp-gzip_2Ftmp_2Fbuild_2Fapidoc.html.png)](https://npmdoc.github.io/node-npmdoc-gulp-gzip/build..beta..travis-ci.org/apidoc.html)
+[![apidoc](https://npmdoc.github.io/node-npmdoc-gulp-gzip/build/screenCapture.buildCi.browser.apidoc.html.png)](https://npmdoc.github.io/node-npmdoc-gulp-gzip/build/apidoc.html)
 
-![package-listing](https://npmdoc.github.io/node-npmdoc-gulp-gzip/build/screen-capture.npmPackageListing.svg)
+![npmPackageListing](https://npmdoc.github.io/node-npmdoc-gulp-gzip/build/screenCapture.npmPackageListing.svg)
+
+![npmPackageDependencyTree](https://npmdoc.github.io/node-npmdoc-gulp-gzip/build/screenCapture.npmPackageDependencyTree.svg)
 
 
 
@@ -15,8 +17,7 @@
 
 {
     "author": {
-        "name": "Jeremy Stuckey",
-        "email": "jeremystuckey@gmail.com"
+        "name": "Jeremy Stuckey"
     },
     "bugs": {
         "url": "https://github.com/jstuckey/gulp-gzip/issues"
@@ -65,13 +66,11 @@
     "main": "index.js",
     "maintainers": [
         {
-            "name": "jstuckey",
-            "email": "jeremystuckey@gmail.com"
+            "name": "jstuckey"
         }
     ],
     "name": "gulp-gzip",
     "optionalDependencies": {},
-    "readme": "ERROR: No README data found!",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/jstuckey/gulp-gzip.git"
@@ -88,78 +87,118 @@
 # <a name="apidoc.tableOfContents"></a>[table of contents](#apidoc.tableOfContents)
 
 #### [module gulp-gzip](#apidoc.module.gulp-gzip)
-1.  object <span class="apidocSignatureSpan">gulp-gzip.</span>utils
-
-#### [module gulp-gzip.utils](#apidoc.module.gulp-gzip.utils)
-1.  [function <span class="apidocSignatureSpan">gulp-gzip.utils.</span>merge (target, source)](#apidoc.element.gulp-gzip.utils.merge)
-1.  [function <span class="apidocSignatureSpan">gulp-gzip.utils.</span>threshold (obj)](#apidoc.element.gulp-gzip.utils.threshold)
+1.  [function <span class="apidocSignatureSpan"></span>gulp-gzip (options)](#apidoc.element.gulp-gzip.gulp-gzip)
+1.  [function <span class="apidocSignatureSpan">gulp-gzip.</span>toString ()](#apidoc.element.gulp-gzip.toString)
 
 
 
 # <a name="apidoc.module.gulp-gzip"></a>[module gulp-gzip](#apidoc.module.gulp-gzip)
 
-
-
-# <a name="apidoc.module.gulp-gzip.utils"></a>[module gulp-gzip.utils](#apidoc.module.gulp-gzip.utils)
-
-#### <a name="apidoc.element.gulp-gzip.utils.merge"></a>[function <span class="apidocSignatureSpan">gulp-gzip.utils.</span>merge (target, source)](#apidoc.element.gulp-gzip.utils.merge)
+#### <a name="apidoc.element.gulp-gzip.gulp-gzip"></a>[function <span class="apidocSignatureSpan"></span>gulp-gzip (options)](#apidoc.element.gulp-gzip.gulp-gzip)
 - description and source-code
 ```javascript
-function merge(target, source) {
-  if (typeof source === 'undefined') source = {};
+gulp-gzip = function (options) {
 
-  Object.keys(source).forEach(function(key) {
-    if (key === 'threshold') {
-      target[key] = threshold(source[key]);
-    } else {
-      target[key] = source[key];
+  // Combine user defined options with default options
+  var defaultConfig = {
+    append: true,
+    threshold: false,
+    gzipOptions: {},
+    skipGrowingFiles: false
+  };
+  var config = utils.merge(defaultConfig, options);
+
+  // Create a through2 object stream. This is our plugin export
+  var stream = through2.obj(gulpGzip);
+
+  // Expose the config so we can test it
+  stream.config = config;
+
+  function gulpGzip(file, enc, done) {
+
+<span class="apidocCodeCommentSpan">    /*jshint validthis: true */
+</span>    var self = this;
+
+    // Check for empty file
+    if (file.isNull()) {
+      // Pass along the empty file to the next plugin
+      self.push(file);
+      done();
+      return;
     }
-  });
 
-  return target;
+    // Call when finished with compression
+    var finished = function(err, contents, wasCompressed) {
+      if (err) {
+        var error = new PluginError(PLUGIN_NAME, err, { showStack: true });
+        self.emit('error', error);
+        done();
+        return;
+      }
+
+      var complete = function() {
+        file.contents = contents;
+        self.push(file);
+        done();
+      };
+
+      var getFixedPath = function(filepath) {
+        if (config.extension) {
+          filepath += '.' + config.extension;
+        } else if (config.preExtension) {
+          filepath = filepath.replace(/(\.[^\.]+)$/, '.' + config.preExtension + '$1');
+        } else if (config.append) {
+          filepath += '.gz';
+        }
+
+        return filepath;
+      };
+
+      if (wasCompressed) {
+        if (file.contentEncoding) {
+          file.contentEncoding.push('gzip');
+        } else {
+          file.contentEncoding = [ 'gzip' ];
+        }
+
+        file.path = getFixedPath(file.path);
+        complete();
+      } else if (config.deleteMode) {
+        var cwd = path.resolve(config.deleteModeCwd || process.cwd());
+        var directory = typeof config.deleteMode === 'string' ? config.deleteMode : config.deleteMode(file);
+        var filepath = path.resolve(cwd, directory, getFixedPath(file.relative));
+
+        fs.exists(filepath, function(exists) {
+          if(exists) {
+            gutil.log(gutil.colors.green('Gzipped file ' + filepath + ' deleted'));
+            fs.unlink(filepath, complete);
+          } else {
+            complete();
+          }
+        });
+      } else {
+        complete();
+      }
+
+      return;
+    };
+
+    compress(file.contents, config, finished);
+  }
+
+  return stream;
 }
 ```
 - example usage
 ```shell
-...
-// Combine user defined options with default options
-var defaultConfig = {
-  append: true,
-  threshold: false,
-  gzipOptions: {},
-  skipGrowingFiles: false
-};
-var config = utils.merge(defaultConfig, options);
-
-// Create a through2 object stream. This is our plugin export
-var stream = through2.obj(gulpGzip);
-
-// Expose the config so we can test it
-stream.config = config;
-...
+n/a
 ```
 
-#### <a name="apidoc.element.gulp-gzip.utils.threshold"></a>[function <span class="apidocSignatureSpan">gulp-gzip.utils.</span>threshold (obj)](#apidoc.element.gulp-gzip.utils.threshold)
+#### <a name="apidoc.element.gulp-gzip.toString"></a>[function <span class="apidocSignatureSpan">gulp-gzip.</span>toString ()](#apidoc.element.gulp-gzip.toString)
 - description and source-code
 ```javascript
-function threshold(obj) {
-  var ret;
-
-  switch (typeof obj) {
-    case 'string':
-      ret = bytes(obj) < 150 ? 150 : bytes(obj);
-      break;
-    case 'number':
-      ret = obj < 150 ? 150 : obj;
-      break;
-    case 'boolean':
-      ret = obj === false ? false : 150;
-      break;
-    default:
-      throw new Error('threshold must be String|Number|Boolean');
-  }
-
-  return ret;
+toString = function () {
+    return toString;
 }
 ```
 - example usage
